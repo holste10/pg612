@@ -7,8 +7,8 @@
 
 
 ModelInterleavedArray::ModelInterleavedArray(std::string filename, bool invert) {
-// 	min_dim = glm::vec3(std::numeric_limits<float>::min());
-// 	max_dim = glm::vec3(std::numeric_limits<float>::max());
+	min_dim = glm::vec3(std::numeric_limits<float>::min());
+	max_dim = glm::vec3(std::numeric_limits<float>::max());
 	std::vector<MyVertex> array_data;
 	aiMatrix4x4 trafo;
 	aiIdentityMatrix4(&trafo);
@@ -24,40 +24,10 @@ ModelInterleavedArray::ModelInterleavedArray(std::string filename, bool invert) 
 
 	loadRecursive(root, invert, array_data, scene, scene->mRootNode);
 
-	min_dim = array_data[0].position;
-	max_dim = array_data[0].position;
-	for(unsigned int i = 1; i < array_data.size(); ++i) {
-		if(min_dim.x < array_data[i].position.x)
-			min_dim.x = array_data[i].position.x;
-		if(min_dim.y < array_data[i].position.y)
-			min_dim.y = array_data[i].position.y;
-		if(min_dim.z < array_data[i].position.z)
-			min_dim.z = array_data[i].position.z;
-		if(max_dim.x > array_data[i].position.x)
-			max_dim.x = array_data[i].position.x;
-		if(max_dim.y > array_data[i].position.y) 
-			max_dim.y = array_data[i].position.y;
-		if(max_dim.z > array_data[i].position.z) 
-			max_dim.z = array_data[i].position.z;
-	}
-	
- 	
-	glm::vec3 scale = min_dim - max_dim;
-	//scale = 1.0f / scale;
-	//scale = -scale;
-	std::cout << scale.x << " " << scale.y << " " << scale.z << std::endl;
-
-	glm::vec3 center = max_dim + min_dim;
-	center /= 2;
-	center = -center;
-	std::cout << center.x << " " << center.y << " " << center.z << std::endl;
-
-	//root.transform = glm::scale(root.transform, scale) * glm::translate(root.transform, center);
-
-	root.transform = glm::scale(root.transform, 1.0f / scale);
-
-	//root.transform = glm::scale(root.transform, glm::vec3(6.44f));
-	root.transform = glm::translate(root.transform, center);
+	// Scale first, Translate center second!
+	std::pair<glm::vec3, glm::vec3> translateVectors = getTranslateVectors(array_data);
+	root.transform = glm::scale(root.transform, translateVectors.first);
+	root.transform = glm::translate(root.transform, translateVectors.second);
 
 	n_vertices = array_data.size();
 	
@@ -86,7 +56,7 @@ void ModelInterleavedArray::loadRecursive(MeshPart& part, bool invert,
 	for(unsigned int n=0; n < node->mNumMeshes; ++n) {
 		const struct aiMesh* mesh = scene->mMeshes[node->mMeshes[n]];
 
-		part.first = array_data.size()/3;
+		part.first = array_data.size();
 		part.count = mesh->mNumFaces*3;
 
 		array_data.reserve(array_data.size() + part.count*3);
@@ -118,4 +88,43 @@ void ModelInterleavedArray::loadRecursive(MeshPart& part, bool invert,
 		part.children.push_back(MeshPart());
 		loadRecursive(part.children.back(), invert, array_data, scene, node->mChildren[n]);
 	}
+}
+
+std::pair<glm::vec3, glm::vec3> ModelInterleavedArray::getTranslateVectors(const std::vector<MyVertex>& array_data) {
+	for(unsigned int i = 0; i < array_data.size(); i++) {
+		float x = array_data[i].position.x;
+		float y = array_data[i].position.y;
+		float z = array_data[i].position.z;
+
+		if(min_dim.x < x)
+			min_dim.x = x;
+		if(min_dim.y < y)
+			min_dim.y = y;
+		if(min_dim.z < z)
+			min_dim.z = z;
+		if(max_dim.x > x)
+			max_dim.x = x;
+		if(max_dim.y > y) 
+			max_dim.y = y;
+		if(max_dim.z > z) 
+			max_dim.z = z;
+	}
+
+	glm::vec3 displacement = min_dim - max_dim;
+	float scalefactor = 0.0f;
+	if(displacement.x > displacement.y)
+		scalefactor = displacement.x;
+	else
+		scalefactor = displacement.y;
+
+	if(displacement.z > scalefactor)
+		scalefactor = displacement.z;
+	
+	glm::vec3 scale = glm::vec3(1.0f / scalefactor);
+
+	glm::vec3 center = max_dim + min_dim;
+	center /= 2;
+	center = -center;
+
+	return std::make_pair(scale, center);
 }

@@ -13,6 +13,14 @@
 #include "ModelInterleavedArray.h"
 #include "VirtualTrackball.h"
 
+enum RenderMode {
+	RENDERMODE_FLAT, 
+	RENDERMODE_PHONG, 
+	RENDERMODE_WIREFRAME, 
+	RENDERMODE_HIDDENLINE
+};
+
+
 /**
  * This class handles the game logic and display.
  * Uses SDL as the display manager, and glm for 
@@ -24,7 +32,7 @@ public:
 	/**
 	 * Constructor
 	 */
-	GameManager();
+	GameManager(char* argv);
 
 	/**
 	 * Destructor
@@ -85,16 +93,28 @@ protected:
 	static const unsigned int window_height = 600;
 
 private:
-	static void renderMeshRecursive(MeshPart& mesh, const std::shared_ptr<GLUtils::Program>& program, const glm::mat4& modelview, const glm::mat4& transform);
+	static void renderMeshRecursive(MeshPart& mesh, 
+			const std::shared_ptr<GLUtils::Program>& program, 
+			const glm::mat4& modelview, 
+			const glm::mat4& transform,
+			glm::vec3 color);
 
+	glm::mat4 getNewViewMatrix();
+	void renderWireframe(glm::vec3 color);
+	void renderPhong(glm::vec3 color);
+	void renderFlat(glm::vec3 color);
+	void renderHiddenLine();
+	void zoom(float factor);
+	void ChangeToProgram(std::shared_ptr<GLUtils::Program>& program);
 
 private:
-
 	GLuint vao; //< Vertex array object
 	//GLuint vertex_vbo; //< VBO for vertex data
 	std::shared_ptr<GLUtils::VBO> vertices, normals;
 	//GLuint program; //< OpenGL shader program
-	std::shared_ptr<GLUtils::Program> program;
+	std::shared_ptr<GLUtils::Program> phong_program;
+	std::shared_ptr<GLUtils::Program> flat_program;
+	std::shared_ptr<GLUtils::Program> active_program;
 
 	std::shared_ptr<Model> model;
 	std::shared_ptr<ModelInterleavedArray> modelInterleaved;
@@ -107,10 +127,15 @@ private:
 	glm::mat3 normal_matrix; //< OpenGL matrix to transfor normals
 	glm::mat4 trackball_view_matrix; //< OpenGL camera matrix for the trackball
 	
-	VirtualTrackball trackball;
+	VirtualTrackball trackball; //< Our virtual track ball for rotation.
 	SDL_Window* main_window; //< Our window handle
 	SDL_GLContext main_context; //< Our opengl context handle 
 	float fov;
+
+	RenderMode rendermode;
+	glm::vec3 background_color;
+	glm::vec3 model_color;
+	std::string model_to_load;
 };
 
 #endif // _GAMEMANAGER_H_

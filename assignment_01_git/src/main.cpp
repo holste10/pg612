@@ -11,7 +11,7 @@
  */
 int main(int argc, char *argv[]) {
 	std::shared_ptr<GameManager> game;
-	game.reset(new GameManager());
+	game.reset(new GameManager(argv[1]));
 	game->init();
 	game->play();
 	game.reset();

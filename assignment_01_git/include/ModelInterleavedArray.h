@@ -34,6 +34,9 @@ private:
 	static void loadRecursive(MeshPart& part, bool invert, 
 		std::vector<MyVertex>& array_data, const aiScene* scene, const aiNode* node);
 
+	std::pair<glm::vec3, glm::vec3> getTranslateVectors(const std::vector<MyVertex>& vertex_data);
+
+private:
 	const aiScene* scene;
 	MeshPart root;
 
