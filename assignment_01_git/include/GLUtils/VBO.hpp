@@ -7,10 +7,11 @@ namespace GLUtils {
 
 class VBO {
 public:
-	VBO(const void* data, unsigned int bytes, int usage=GL_STATIC_DRAW) {
+	VBO(const void* data, unsigned int bytes, int mode, int usage=GL_STATIC_DRAW) {
+		buffer_mode = mode;
 		glGenBuffers(1, &vbo_name);
 		bind();
-		glBufferData(GL_ARRAY_BUFFER, bytes, data, usage);
+		glBufferData(buffer_mode, bytes, data, usage);
 		unbind();
 	}
 
@@ -20,19 +21,20 @@ public:
 	}
 
 	inline void bind() {
-		glBindBuffer(GL_ARRAY_BUFFER, vbo_name);
+		glBindBuffer(buffer_mode, vbo_name);
 	}
 
 	static inline void unbind() {
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
-
+	
 	inline GLuint name() {
 		return vbo_name;
 	}
 
 private:
 	VBO() {}
+	int buffer_mode;
 	GLuint vbo_name; //< VBO name
 };
 

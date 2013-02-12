@@ -9,6 +9,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <IL/il.h>
+#include <IL/ilu.h>
 
 using std::cerr;
 using std::endl;
@@ -19,7 +21,7 @@ using GLUtils::readFile;
 GameManager::GameManager(char* argv) {
 	my_timer.restart();
 	rendermode = RENDERMODE_PHONG;
-	background_color = glm::vec3(0.0f, 0.0f, 0.0f);
+	background_color = glm::vec3(0.0f, 0.0f, 0.5f);
 	model_color = glm::vec3(1.0f, 1.0f, 1.0f);
 	model_to_load = argv;
 	std::cout << argv << std::endl;
@@ -67,6 +69,11 @@ void GameManager::createOpenGLContext() {
 	// supposed to (setting function pointers for core functionality).
 	// Lets do the ugly thing of swallowing the error....
 	glGetError();
+
+	ilInit();
+	iluInit();
+	ilOriginFunc(IL_ORIGIN_UPPER_LEFT);
+	ilEnable(IL_ORIGIN_SET);
 }
 
 void GameManager::setOpenGLStates() {
@@ -97,7 +104,6 @@ void GameManager::createSimpleProgram() {
 	glUniformMatrix4fv(phong_program->getUniform("projection_matrix"), 1, 0, glm::value_ptr(projection_matrix));
 	phong_program->disuse();
 
-
 	// FLAT SHADING
 	fs_src = readFile("shaders/flatshader.frag");
 	vs_src = readFile("shaders/flatshader.vert");
@@ -116,37 +122,15 @@ void GameManager::createVAO() {
 	glBindVertexArray(vao);
 	CHECK_GL_ERROR();
 
-
 	modelInterleaved.reset(new ModelInterleavedArray("models/toyplane.obj", false));
 	modelInterleaved->getArray()->bind();
-
-	phong_program->setAttributePointer("in_Position", 3 , GL_FLOAT, GL_FALSE, sizeof(MyVertex), 0);
-	phong_program->setAttributePointer("in_Normal", 3, GL_FLOAT, GL_FALSE, sizeof(MyVertex), (void*)(sizeof(glm::vec3)));
+	modelInterleaved->getIndices()->bind();
 	CHECK_GL_ERROR();
 
-	flat_program->setAttributePointer("in_Position", 3 , GL_FLOAT, GL_FALSE, sizeof(MyVertex), 0);
-	flat_program->setAttributePointer("in_Normal", 3, GL_FLOAT, GL_FALSE, sizeof(MyVertex), (void*)(sizeof(glm::vec3)));
+	active_program->setAttributePointer("in_Position", 3 , GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)V_POSITION);
+	active_program->setAttributePointer("in_Normal", 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)V_NORMAL);
+	active_program->setAttributePointer("in_Texture_Coords", 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)V_TEX_COORD);
 	CHECK_GL_ERROR();
-
-	modelInterleaved->getArray()->unbind();
-	CHECK_GL_ERROR();
-	
-	
-	/*
-	std::stringstream ss;
-	ss << "models/" << model_to_load;
-
-	model.reset(new Model(ss.str(), false));
-	model->getVertices()->bind();
-	phong_program->setAttributePointer("in_Position", 3);
-	flat_program->setAttributePointer("in_Position", 3);
-	CHECK_GL_ERROR();
-
-	model->getNormals()->bind();
-	phong_program->setAttributePointer("in_Normal", 3);
-	flat_program->setAttributePointer("in_Normal", 3);
-	CHECK_GL_ERROR();
-	*/
 
 	//Unbind VBOs and VAO
 	vertices->unbind(); //Unbinds both vertices and normals
@@ -186,11 +170,15 @@ void GameManager::renderMeshRecursive(
 	//3x3 leading submatrix of the modelview matrix
 	glm::mat3 normal_matrix = glm::transpose(glm::inverse(glm::mat3(modelview_matrix)));
 	glUniformMatrix3fv(program->getUniform("normal_matrix"), 1, 0, glm::value_ptr(normal_matrix));
-	
 	glUniform3f(program->getUniform("color"), color.r, color.g, color.b);
-
-	glDrawArrays(GL_TRIANGLES, mesh.first, mesh.count);
-	for (unsigned int i=0; i<mesh.children.size(); ++i)
+	
+	glDrawElementsBaseVertex(GL_TRIANGLES, 
+							mesh.count, 
+							GL_UNSIGNED_INT, 
+							(void*)(sizeof(unsigned int) * (mesh.first)),
+							mesh.vertexCount );
+	
+	for (unsigned int i = 0; i < mesh.children.size(); ++i)
 		renderMeshRecursive(mesh.children.at(i), program, view_matrix, meshpart_model_matrix, color);
 }
 
@@ -240,7 +228,7 @@ void GameManager::play() {
 			case SDL_MOUSEWHEEL:
 				if(event.wheel.y > 0) {
 					zoom(-5.0f);
-				} else if(event.wheel.y < 0){
+				} else if(event.wheel.y < 0) {
 					zoom(5.0f);
 				}
 				break;
@@ -297,8 +285,7 @@ void GameManager::renderWireframe(glm::vec3 color) {
 	renderMeshRecursive(modelInterleaved->getMesh(), active_program, getNewViewMatrix(), model_matrix, color);
 }
 
-void GameManager::renderPhong(glm::vec3 color) 
-{
+void GameManager::renderPhong(glm::vec3 color) {
 	ChangeToProgram(phong_program);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	renderMeshRecursive(modelInterleaved->getMesh(), active_program, getNewViewMatrix(), model_matrix, color);
@@ -322,8 +309,7 @@ void GameManager::renderHiddenLine() {
 	glDisable(GL_POLYGON_OFFSET_LINE);
 }
 
-void GameManager::zoom(float factor)
-{
+void GameManager::zoom(float factor) {
 	float newFov = fov + factor;
 	if(newFov < 170.0f && newFov >= 5)
 		fov = newFov;
@@ -332,8 +318,7 @@ void GameManager::zoom(float factor)
 	glUniformMatrix4fv(active_program->getUniform("projection_matrix"), 1, 0, glm::value_ptr(projection_matrix));
 }
 
-void GameManager::ChangeToProgram(std::shared_ptr<GLUtils::Program>& program)
-{
+void GameManager::ChangeToProgram(std::shared_ptr<GLUtils::Program>& program) {
 	active_program = program;
 	glUniformMatrix4fv(active_program->getUniform("projection_matrix"), 1, 0, glm::value_ptr(projection_matrix));
 }

@@ -31,8 +31,8 @@ Model::Model(std::string filename, bool invert) {
 
 	//Create the VBOs from the data.
 	if (fmod(static_cast<float>(n_vertices), 3.0f) < 0.000001f) {
-		vertices.reset(new GLUtils::VBO(vertex_data.data(), n_vertices*sizeof(float)));
-		normals.reset(new GLUtils::VBO(normal_data.data(), n_vertices*sizeof(float)));
+		vertices.reset(new GLUtils::VBO(vertex_data.data(), n_vertices*sizeof(float), GL_ARRAY_BUFFER));
+		normals.reset(new GLUtils::VBO(normal_data.data(), n_vertices*sizeof(float), GL_ARRAY_BUFFER));
 	}
 	else
 		THROW_EXCEPTION("The number of vertices in the mesh is wrong");

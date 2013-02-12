@@ -7,9 +7,11 @@
 
 
 ModelInterleavedArray::ModelInterleavedArray(std::string filename, bool invert) {
+	std::cout << "Loading model... Please Wait..." << std::endl;
 	min_dim = glm::vec3(std::numeric_limits<float>::min());
 	max_dim = glm::vec3(std::numeric_limits<float>::max());
-	std::vector<MyVertex> array_data;
+	std::vector<VertexData> array_data;
+	std::vector<unsigned int> indices_data;
 	aiMatrix4x4 trafo;
 	aiIdentityMatrix4(&trafo);
 
@@ -20,9 +22,7 @@ ModelInterleavedArray::ModelInterleavedArray(std::string filename, bool invert) 
 		THROW_EXCEPTION(log);
 	}
 
-	std::cout << sizeof(glm::vec3) << std::endl;
-
-	loadRecursive(root, invert, array_data, scene, scene->mRootNode);
+	loadRecursive(root, invert, array_data, indices_data, textures, scene, scene->mRootNode);
 
 	// Scale first, Translate center second!
 	std::pair<glm::vec3, glm::vec3> translateVectors = getTranslateVectors(array_data);
@@ -30,12 +30,13 @@ ModelInterleavedArray::ModelInterleavedArray(std::string filename, bool invert) 
 	root.transform = glm::translate(root.transform, translateVectors.second);
 
 	n_vertices = array_data.size();
+	n_indices = indices_data.size();
 	
-	std::shared_ptr<MyVertex> test;
-	test.reset(new MyVertex(array_data[0]));
+	if(fmod(static_cast<float>(n_indices), 3.0f) < 0.000001f) {
+		interleaved.reset(new GLUtils::VBO(array_data.data(), n_vertices * sizeof(VertexData), GL_ARRAY_BUFFER));
+		indices.reset(new GLUtils::VBO(indices_data.data(), n_indices * sizeof(unsigned int), GL_ELEMENT_ARRAY_BUFFER));
 
-	if(fmod(static_cast<float>(n_vertices), 3.0f) < 0.000001f) {
-		interleaved.reset(new GLUtils::VBO(array_data.data(), n_vertices * sizeof(MyVertex)));
+		std::cout << "Model Loaded Successfully" << std::endl;
 	} else {
 		THROW_EXCEPTION("The number of vertices in the mesh is wrong");
 	}
@@ -45,8 +46,14 @@ ModelInterleavedArray::~ModelInterleavedArray() {
 
 }
 
-void ModelInterleavedArray::loadRecursive(MeshPart& part, bool invert, 
-		std::vector<MyVertex>& array_data, const aiScene* scene, const aiNode* node) {
+void ModelInterleavedArray::loadRecursive(
+	MeshPart& part, 
+	bool invert, 
+		std::vector<VertexData>& array_data, 
+		std::vector<unsigned int>& indices_data,
+		std::vector<Texture2D>& textures,
+		const aiScene* scene, 
+		const aiNode* node) {
 	
 	aiMatrix4x4 m = node->mTransformation;
 	for (int j=0; j<4; ++j)
@@ -56,41 +63,61 @@ void ModelInterleavedArray::loadRecursive(MeshPart& part, bool invert,
 	for(unsigned int n=0; n < node->mNumMeshes; ++n) {
 		const struct aiMesh* mesh = scene->mMeshes[node->mMeshes[n]];
 
-		part.first = array_data.size();
+		part.first = indices_data.size();
 		part.count = mesh->mNumFaces*3;
+		part.vertexCount = array_data.size();
 
-		array_data.reserve(array_data.size() + part.count*3);
+		indices_data.reserve(indices_data.size() + part.count);
 
-		//Add the vertices from file
+		for(unsigned int i = 0; i < mesh->mNumVertices; i++) {
+			VertexData tmp;
+			tmp.position.x = mesh->mVertices[i].x;
+			tmp.position.y = mesh->mVertices[i].y;
+			tmp.position.z = mesh->mVertices[i].z;
+
+			if(mesh->HasNormals()) {
+				tmp.normal.x = mesh->mNormals[i].x;
+				tmp.normal.y = mesh->mNormals[i].y;
+				tmp.normal.z = mesh->mNormals[i].z;
+			}
+			
+			if(mesh->HasTextureCoords(0)) {
+				tmp.tex_coords.x = mesh->mTextureCoords[0][i].x;
+				tmp.tex_coords.y = mesh->mTextureCoords[0][i].y;
+			}
+			array_data.push_back(tmp);
+		}
+		
 		for (unsigned int t = 0; t < mesh->mNumFaces; ++t) {
 			const struct aiFace* face = &mesh->mFaces[t];
 
 			if(face->mNumIndices != 3)
 				THROW_EXCEPTION("Only triangle meshes are supported");
 
-			for(unsigned int i = 0; i < face->mNumIndices; i++) {
-				int index = face->mIndices[i];
-
-				MyVertex vertex;
-				vertex.position.x = mesh->mVertices[index].x;
-				vertex.position.y = mesh->mVertices[index].y;
-				vertex.position.z = mesh->mVertices[index].z;
-				vertex.normal.x = mesh->mNormals[index].x;
-				vertex.normal.y = mesh->mNormals[index].y;
-				vertex.normal.z = mesh->mNormals[index].z;
-				array_data.push_back(vertex);
-			}
+			for(unsigned int i = 0; i < face->mNumIndices; i++) 
+				indices_data.push_back(face->mIndices[i]);			
 		}
+	
+		/*
+		if(scene->HasMaterials()) {
+			aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+			for(int i = 0; i < material->GetTextureCount(aiTextureType_DIFFUSE); i++) {
+				aiString str;
+				material->GetTexture(aiTextureType_DIFFUSE, i, &str);
+				Texture2D tex = Texture2D(str.C_Str());
+				textures.push_back(tex);
+			}
+		}*/
 	}
 
 	//Load children
 	for(unsigned int n = 0; n < node->mNumChildren; ++n) {
 		part.children.push_back(MeshPart());
-		loadRecursive(part.children.back(), invert, array_data, scene, node->mChildren[n]);
+		loadRecursive(part.children.back(), invert, array_data, indices_data, textures, scene, node->mChildren[n]);
 	}
 }
 
-std::pair<glm::vec3, glm::vec3> ModelInterleavedArray::getTranslateVectors(const std::vector<MyVertex>& array_data) {
+std::pair<glm::vec3, glm::vec3> ModelInterleavedArray::getTranslateVectors(const std::vector<VertexData>& array_data) {
 	for(unsigned int i = 0; i < array_data.size(); i++) {
 		float x = array_data[i].position.x;
 		float y = array_data[i].position.y;
@@ -116,15 +143,17 @@ std::pair<glm::vec3, glm::vec3> ModelInterleavedArray::getTranslateVectors(const
 		scalefactor = displacement.x;
 	else
 		scalefactor = displacement.y;
-
 	if(displacement.z > scalefactor)
 		scalefactor = displacement.z;
 	
 	glm::vec3 scale = glm::vec3(1.0f / scalefactor);
-
-	glm::vec3 center = max_dim + min_dim;
-	center /= 2;
-	center = -center;
-
+	glm::vec3 center = glm::vec3((max_dim + min_dim)) /= -2;
 	return std::make_pair(scale, center);
+}
+
+void ModelInterleavedArray::bindTextures()
+{
+	for(unsigned int i = 0; i < textures.size(); i++) {
+		textures[i].bind();
+	}
 }

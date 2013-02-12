@@ -19,11 +19,13 @@ struct MeshPart {
 		transform = glm::mat4(1.0f);
 		first = 0;
 		count = 0;
+		vertexCount = 0;
 	}
 
 	glm::mat4 transform;
 	unsigned int first;
 	unsigned int count;
+	unsigned int vertexCount;
 	std::vector<MeshPart> children;
 };
 
