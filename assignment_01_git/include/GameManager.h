@@ -89,8 +89,8 @@ protected:
 	 */
 	void createVAO();
 
-	static const unsigned int window_width = 800;
-	static const unsigned int window_height = 600;
+	static const unsigned int window_width = 1200;
+	static const unsigned int window_height = 900;
 
 private:
 	static void renderMeshRecursive(MeshPart& mesh, 

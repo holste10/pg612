@@ -17,12 +17,14 @@ struct Image {
 
 class Texture2D {
 public:
+	Texture2D();
 	Texture2D(const std::string& filename);
 	void bind();
 
 	GLuint texture_name;
 
 private:
+	void createWhiteImage();
 	void readImageFile(const std::string& filename);
 	void createGLTexture();
 	std::shared_ptr<Image> image;

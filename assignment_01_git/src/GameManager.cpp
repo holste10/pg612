@@ -72,7 +72,7 @@ void GameManager::createOpenGLContext() {
 
 	ilInit();
 	iluInit();
-	ilOriginFunc(IL_ORIGIN_UPPER_LEFT);
+	ilOriginFunc(IL_ORIGIN_LOWER_LEFT);
 	ilEnable(IL_ORIGIN_SET);
 }
 
@@ -122,9 +122,11 @@ void GameManager::createVAO() {
 	glBindVertexArray(vao);
 	CHECK_GL_ERROR();
 
-	modelInterleaved.reset(new ModelInterleavedArray("models/toyplane.obj", false));
+	//modelInterleaved.reset(new ModelInterleavedArray("models/bunny.obj", false));
+	modelInterleaved.reset(new ModelInterleavedArray("models/lara.obj"));
 	modelInterleaved->getArray()->bind();
 	modelInterleaved->getIndices()->bind();
+	modelInterleaved->bindTextures();
 	CHECK_GL_ERROR();
 
 	active_program->setAttributePointer("in_Position", 3 , GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)V_POSITION);
@@ -178,6 +180,8 @@ void GameManager::renderMeshRecursive(
 							(void*)(sizeof(unsigned int) * (mesh.first)),
 							mesh.vertexCount );
 	
+	//glDrawElements(GL_TRIANGLES, mesh.count, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int)*mesh.first));
+
 	for (unsigned int i = 0; i < mesh.children.size(); ++i)
 		renderMeshRecursive(mesh.children.at(i), program, view_matrix, meshpart_model_matrix, color);
 }

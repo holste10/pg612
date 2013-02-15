@@ -26,12 +26,7 @@ struct VertexData {
 enum VertexLayout {
 	V_POSITION = 0,
 	V_NORMAL = sizeof(glm::vec3),
-	V_TEX_COORD = sizeof(glm::vec3) *2
-};
-
-struct TextureData {
-	unsigned int id;
-	unsigned int type;
+	V_TEX_COORD = sizeof(glm::vec3) * 2
 };
 
 class ModelInterleavedArray {

@@ -20,7 +20,6 @@ void main() {
 	ex_Light = normalize(vec3(200.0f, 200.0f, 200.0f) - pos.xyz);
 	gl_Position = projection_matrix * pos;
 	ex_Color = color;
-
 	ex_Texture_Coords = in_Texture_Coords;
 
 	normal_smooth = normal_matrix * in_Normal;

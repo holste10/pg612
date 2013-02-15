@@ -1,15 +1,10 @@
 #include "ModelInterleavedArray.h"
-
 #include "GameException.h"
-
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 
-
 ModelInterleavedArray::ModelInterleavedArray(std::string filename, bool invert) {
-	std::cout << "Loading model... Please Wait..." << std::endl;
-	min_dim = glm::vec3(std::numeric_limits<float>::min());
-	max_dim = glm::vec3(std::numeric_limits<float>::max());
+	std::cout << "Loading model: " << filename << "... Please Wait..." << std::endl;
 	std::vector<VertexData> array_data;
 	std::vector<unsigned int> indices_data;
 	aiMatrix4x4 trafo;
@@ -35,7 +30,6 @@ ModelInterleavedArray::ModelInterleavedArray(std::string filename, bool invert) 
 	if(fmod(static_cast<float>(n_indices), 3.0f) < 0.000001f) {
 		interleaved.reset(new GLUtils::VBO(array_data.data(), n_vertices * sizeof(VertexData), GL_ARRAY_BUFFER));
 		indices.reset(new GLUtils::VBO(indices_data.data(), n_indices * sizeof(unsigned int), GL_ELEMENT_ARRAY_BUFFER));
-
 		std::cout << "Model Loaded Successfully" << std::endl;
 	} else {
 		THROW_EXCEPTION("The number of vertices in the mesh is wrong");
@@ -49,12 +43,13 @@ ModelInterleavedArray::~ModelInterleavedArray() {
 void ModelInterleavedArray::loadRecursive(
 	MeshPart& part, 
 	bool invert, 
-		std::vector<VertexData>& array_data, 
-		std::vector<unsigned int>& indices_data,
-		std::vector<Texture2D>& textures,
-		const aiScene* scene, 
-		const aiNode* node) {
+	std::vector<VertexData>& array_data, 
+	std::vector<unsigned int>& indices_data,
+	std::vector<Texture2D>& textures,
+	const aiScene* scene, 
+	const aiNode* node) {
 	
+
 	aiMatrix4x4 m = node->mTransformation;
 	for (int j=0; j<4; ++j)
 		for (int i=0; i<4; ++i)
@@ -67,7 +62,7 @@ void ModelInterleavedArray::loadRecursive(
 		part.count = mesh->mNumFaces*3;
 		part.vertexCount = array_data.size();
 
-		indices_data.reserve(indices_data.size() + part.count);
+		indices_data.reserve(indices_data.size() + part.count*3);
 
 		for(unsigned int i = 0; i < mesh->mNumVertices; i++) {
 			VertexData tmp;
@@ -98,16 +93,19 @@ void ModelInterleavedArray::loadRecursive(
 				indices_data.push_back(face->mIndices[i]);			
 		}
 	
-		/*
 		if(scene->HasMaterials()) {
 			aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-			for(int i = 0; i < material->GetTextureCount(aiTextureType_DIFFUSE); i++) {
+			for(unsigned int i = 0; i < material->GetTextureCount(aiTextureType_DIFFUSE); i++) {
 				aiString str;
 				material->GetTexture(aiTextureType_DIFFUSE, i, &str);
-				Texture2D tex = Texture2D(str.C_Str());
+				std::stringstream ss;
+				ss << "models/" << str.C_Str();
+				Texture2D tex = Texture2D(ss.str());
 				textures.push_back(tex);
 			}
-		}*/
+		} else {
+			textures.push_back(Texture2D());
+		}
 	}
 
 	//Load children
@@ -118,6 +116,8 @@ void ModelInterleavedArray::loadRecursive(
 }
 
 std::pair<glm::vec3, glm::vec3> ModelInterleavedArray::getTranslateVectors(const std::vector<VertexData>& array_data) {
+	min_dim = glm::vec3(std::numeric_limits<float>::min());
+	max_dim = glm::vec3(std::numeric_limits<float>::max());
 	for(unsigned int i = 0; i < array_data.size(); i++) {
 		float x = array_data[i].position.x;
 		float y = array_data[i].position.y;
@@ -153,7 +153,6 @@ std::pair<glm::vec3, glm::vec3> ModelInterleavedArray::getTranslateVectors(const
 
 void ModelInterleavedArray::bindTextures()
 {
-	for(unsigned int i = 0; i < textures.size(); i++) {
-		textures[i].bind();
-	}
+	if(textures.size() > 0)
+		textures[0].bind();
 }
