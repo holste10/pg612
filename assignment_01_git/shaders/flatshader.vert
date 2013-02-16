@@ -4,10 +4,12 @@ uniform mat4 modelview_matrix;
 uniform mat3 normal_matrix;
 uniform vec3 color;
 
-in  vec3 in_Position;
-in  vec3 in_Normal;
+in vec3 in_Position;
+in vec3 in_Normal;
+in vec2 in_Texture_Coords;
 
 flat out vec3 ex_Color;
+out vec2 ex_Texture_Coords;
 
 void main() {
 	vec4 pos = modelview_matrix * vec4(in_Position, 1.0f);
@@ -21,5 +23,7 @@ void main() {
 	float diff = max(0.1f, dot(n, light));
 
 	gl_Position = projection_matrix * pos;
+
+	ex_Texture_Coords = in_Texture_Coords;
 	ex_Color = diff * color;
 }

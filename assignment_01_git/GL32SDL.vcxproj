@@ -33,10 +33,8 @@
   <ItemGroup>
     <None Include="shaders\flatshader.frag" />
     <None Include="shaders\flatshader.vert" />
-    <None Include="shaders\test.frag" />
-    <None Include="shaders\test.vert" />
-    <None Include="shaders\wireshader.frag" />
-    <None Include="shaders\wireshader.vert" />
+    <None Include="shaders\phongshader.frag" />
+    <None Include="shaders\phongshader.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{0EB6082A-7B48-4E60-B4B3-2EB3C7254AC1}</ProjectGuid>

@@ -21,8 +21,8 @@ using GLUtils::readFile;
 GameManager::GameManager(char* argv) {
 	my_timer.restart();
 	rendermode = RENDERMODE_PHONG;
-	background_color = glm::vec3(0.0f, 0.0f, 0.5f);
-	model_color = glm::vec3(1.0f, 1.0f, 1.0f);
+	background_color = glm::vec3(0.0f, 0.0f, 0.0f);
+	model_color = glm::vec3(1.0f,1.0f, 1.0f);
 	model_to_load = argv;
 	std::cout << argv << std::endl;
 }
@@ -91,10 +91,19 @@ void GameManager::createMatrices() {
 	view_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -5.0f));
 }
 
+/* * *
+* This method creates two programs, one for phong lighting and 
+* one for flat lighting. The programs are almost the same, except 
+* that the phong-shaders does the calculations in the fragmentshader 
+* and the flat-shaders does the calculations in the vertexshader. 
+* The cute thing about having the shaders almost the same is that 
+* I can switch between the shaders quite easily without setting new 
+* attributes.
+* */
 void GameManager::createSimpleProgram() {
 	// PHONG SHADING
-	std::string fs_src = readFile("shaders/test.frag");
-	std::string vs_src = readFile("shaders/test.vert");
+	std::string fs_src = readFile("shaders/phongshader.frag");
+	std::string vs_src = readFile("shaders/phongshader.vert");
 
 	//Compile shaders, attach to program object, and link
 	phong_program.reset(new Program(vs_src, fs_src));
@@ -114,7 +123,7 @@ void GameManager::createSimpleProgram() {
 	glUniformMatrix4fv(flat_program->getUniform("projection_matrix"), 1, 0, glm::value_ptr(projection_matrix));
 	flat_program->disuse();
 
-	active_program = phong_program;
+	active_program = flat_program;
 }
 
 void GameManager::createVAO() {
@@ -122,7 +131,6 @@ void GameManager::createVAO() {
 	glBindVertexArray(vao);
 	CHECK_GL_ERROR();
 
-	//modelInterleaved.reset(new ModelInterleavedArray("models/bunny.obj", false));
 	modelInterleaved.reset(new ModelInterleavedArray("models/lara.obj"));
 	modelInterleaved->getArray()->bind();
 	modelInterleaved->getIndices()->bind();
@@ -174,13 +182,11 @@ void GameManager::renderMeshRecursive(
 	glUniformMatrix3fv(program->getUniform("normal_matrix"), 1, 0, glm::value_ptr(normal_matrix));
 	glUniform3f(program->getUniform("color"), color.r, color.g, color.b);
 	
-	glDrawElementsBaseVertex(GL_TRIANGLES, 
+	glDrawElementsBaseVertex( GL_TRIANGLES, 
 							mesh.count, 
 							GL_UNSIGNED_INT, 
 							(void*)(sizeof(unsigned int) * (mesh.first)),
 							mesh.vertexCount );
-	
-	//glDrawElements(GL_TRIANGLES, mesh.count, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int)*mesh.first));
 
 	for (unsigned int i = 0; i < mesh.children.size(); ++i)
 		renderMeshRecursive(mesh.children.at(i), program, view_matrix, meshpart_model_matrix, color);
@@ -189,6 +195,7 @@ void GameManager::renderMeshRecursive(
 void GameManager::render() {
 	//Clear screen, and set the correct program
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 	active_program->use();
 
 	//Render geometry
@@ -231,9 +238,9 @@ void GameManager::play() {
 				break;
 			case SDL_MOUSEWHEEL:
 				if(event.wheel.y > 0) {
-					zoom(-5.0f);
+					zoom(-3.0f);
 				} else if(event.wheel.y < 0) {
-					zoom(5.0f);
+					zoom(3.0f);
 				}
 				break;
 			case SDL_KEYDOWN:
@@ -302,15 +309,18 @@ void GameManager::renderFlat(glm::vec3 color) {
 }
 
 void GameManager::renderHiddenLine() {
+
 	glEnable(GL_POLYGON_OFFSET_FILL);
 	glPolygonOffset(1.0f, 1.0f);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	renderMeshRecursive(modelInterleaved->getMesh(), active_program, getNewViewMatrix(), model_matrix, background_color);
 	glDisable(GL_POLYGON_OFFSET_FILL);
+
 	glEnable(GL_POLYGON_OFFSET_LINE);
 	glPolygonOffset(0.0f, 0.0f);
 	renderWireframe(model_color);
 	glDisable(GL_POLYGON_OFFSET_LINE);
+
 }
 
 void GameManager::zoom(float factor) {
@@ -324,6 +334,7 @@ void GameManager::zoom(float factor) {
 
 void GameManager::ChangeToProgram(std::shared_ptr<GLUtils::Program>& program) {
 	active_program = program;
+	active_program->use();
 	glUniformMatrix4fv(active_program->getUniform("projection_matrix"), 1, 0, glm::value_ptr(projection_matrix));
 }
 

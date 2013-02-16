@@ -17,13 +17,14 @@
 #include "Model.h"
 #include "Texture2D.h"
 
+// 32 Bytes!
 struct VertexData {
 	glm::vec3 position;
 	glm::vec3 normal;
 	glm::vec2 tex_coords;
 };
 
-enum VertexLayout {
+enum VertexDataLayout {
 	V_POSITION = 0,
 	V_NORMAL = sizeof(glm::vec3),
 	V_TEX_COORD = sizeof(glm::vec3) * 2

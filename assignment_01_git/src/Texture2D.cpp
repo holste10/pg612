@@ -18,12 +18,12 @@ void Texture2D::bind() {
 void Texture2D::createWhiteImage() {
 	image.reset(new Image());
 
-	image->widht = 256;
-	image->height = 256;
+	image->widht = 16;
+	image->height = 16;
 	image->components = 4;
 
 	unsigned int mem_size = image->widht * image->height * image->components;;
-	unsigned int color_value = 255;
+	unsigned char color_value = 255;
 
 	for(unsigned int i = 0; i < mem_size; i++) 
 		image->data.push_back(color_value);	
@@ -65,5 +65,5 @@ void Texture2D::createGLTexture() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->widht, image->height,
-				 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, &image->data[0]);
+				 0, GL_RGBA, GL_UNSIGNED_BYTE, &image->data[0]);
 }

@@ -79,19 +79,17 @@ glm::vec2 VirtualTrackball::getNormalizedWindowCoordinates(int x, int y) {
 glm::vec3 VirtualTrackball::getClosestPointOnUnitSphere(int x, int y) {
 	glm::vec2 normalized_coords;
 	glm::vec3 point_on_sphere;
-	float k;
-
 	normalized_coords = getNormalizedWindowCoordinates(x, y);
+	float k = sqrt(pow(normalized_coords.x, 2) + pow(normalized_coords.y, 2));	
 
-	k = sqrt(pow(normalized_coords.x, 2) + pow(normalized_coords.y, 2));	
-	if(k >= radius) {
-		point_on_sphere.x = normalized_coords.x / 2;
-		point_on_sphere.y = normalized_coords.y / 2;
-		point_on_sphere.z = 0.0f;
+	if(k > (radius*radius)/2) {
+		point_on_sphere.x = 2 * normalized_coords.x;
+		point_on_sphere.y = 2 * normalized_coords.y;
+		point_on_sphere.z = ((radius*radius)/2) / k;
 	} else {
 		point_on_sphere.x = 2 * normalized_coords.x;
 		point_on_sphere.y = 2 * normalized_coords.y;
-		point_on_sphere.z = sqrt(1 - 4 * pow(k, 2));
+		point_on_sphere.z = sqrt(1 - 4 * (k*k));
 	}
 
 	if(debug)

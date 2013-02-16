@@ -70,15 +70,13 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\test.frag">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="shaders\test.vert">
-      <Filter>Resource Files</Filter>
-    </None>
     <None Include="shaders\flatshader.frag" />
     <None Include="shaders\flatshader.vert" />
-    <None Include="shaders\wireshader.frag" />
-    <None Include="shaders\wireshader.vert" />
+    <None Include="shaders\phongshader.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\phongshader.vert">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

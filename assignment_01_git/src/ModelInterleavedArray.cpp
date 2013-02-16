@@ -7,6 +7,7 @@ ModelInterleavedArray::ModelInterleavedArray(std::string filename, bool invert) 
 	std::cout << "Loading model: " << filename << "... Please Wait..." << std::endl;
 	std::vector<VertexData> array_data;
 	std::vector<unsigned int> indices_data;
+	
 	aiMatrix4x4 trafo;
 	aiIdentityMatrix4(&trafo);
 
@@ -82,7 +83,7 @@ void ModelInterleavedArray::loadRecursive(
 			}
 			array_data.push_back(tmp);
 		}
-		
+
 		for (unsigned int t = 0; t < mesh->mNumFaces; ++t) {
 			const struct aiFace* face = &mesh->mFaces[t];
 
@@ -103,6 +104,10 @@ void ModelInterleavedArray::loadRecursive(
 				Texture2D tex = Texture2D(ss.str());
 				textures.push_back(tex);
 			}
+
+			if(material->GetTextureCount(aiTextureType_DIFFUSE) <= 0) {
+				textures.push_back(Texture2D());
+			}
 		} else {
 			textures.push_back(Texture2D());
 		}
@@ -116,25 +121,19 @@ void ModelInterleavedArray::loadRecursive(
 }
 
 std::pair<glm::vec3, glm::vec3> ModelInterleavedArray::getTranslateVectors(const std::vector<VertexData>& array_data) {
-	min_dim = glm::vec3(std::numeric_limits<float>::min());
+	min_dim = -glm::vec3(std::numeric_limits<float>::max());
 	max_dim = glm::vec3(std::numeric_limits<float>::max());
+
 	for(unsigned int i = 0; i < array_data.size(); i++) {
 		float x = array_data[i].position.x;
 		float y = array_data[i].position.y;
 		float z = array_data[i].position.z;
-
-		if(min_dim.x < x)
-			min_dim.x = x;
-		if(min_dim.y < y)
-			min_dim.y = y;
-		if(min_dim.z < z)
-			min_dim.z = z;
-		if(max_dim.x > x)
-			max_dim.x = x;
-		if(max_dim.y > y) 
-			max_dim.y = y;
-		if(max_dim.z > z) 
-			max_dim.z = z;
+		if(min_dim.x < x) min_dim.x = x;
+		if(min_dim.y < y) min_dim.y = y;
+		if(min_dim.z < z) min_dim.z = z;
+		if(max_dim.x > x) max_dim.x = x;
+		if(max_dim.y > y) max_dim.y = y;
+		if(max_dim.z > z) max_dim.z = z;
 	}
 
 	glm::vec3 displacement = min_dim - max_dim;
@@ -147,12 +146,12 @@ std::pair<glm::vec3, glm::vec3> ModelInterleavedArray::getTranslateVectors(const
 		scalefactor = displacement.z;
 	
 	glm::vec3 scale = glm::vec3(1.0f / scalefactor);
-	glm::vec3 center = glm::vec3((max_dim + min_dim)) /= -2;
+	glm::vec3 center = glm::vec3(max_dim + min_dim) /= -2;
 	return std::make_pair(scale, center);
 }
 
 void ModelInterleavedArray::bindTextures()
 {
-	if(textures.size() > 0)
+	//if(textures.size() > 0)
 		textures[0].bind();
 }
